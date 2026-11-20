@@ -126,6 +126,7 @@ public class FurnitureTable extends JTable implements View, Printable {
   private static final String EXPANDED_ROWS_VISUAL_PROPERTY = "com.eteks.sweethome3d.SweetHome3D.ExpandedGroups";
 
   private UserPreferences        preferences;
+  private Home                   home;
   private ListSelectionListener  tableSelectionListener;
   private boolean                selectionByUser;
   private int                    furnitureInformationRow;
@@ -147,6 +148,7 @@ public class FurnitureTable extends JTable implements View, Printable {
    */
   public FurnitureTable(Home home, UserPreferences preferences, 
                        FurnitureController controller) {
+    this.home = home;
     this.preferences = preferences;
     float resolutionScale = SwingTools.getResolutionScale();
     if (resolutionScale != 1) {
@@ -750,8 +752,12 @@ public class FurnitureTable extends JTable implements View, Printable {
           return headerRendererLabel;
         }
       };
+    boolean hasLevelColumn = false;
     for (int columnIndex = 0, n = columnModel.getColumnCount(); columnIndex < n; columnIndex++) {
       final TableColumn tableColumn = columnModel.getColumn(columnIndex);
+      if (HomePieceOfFurniture.SortableProperty.LEVEL.equals(tableColumn.getIdentifier())) {
+        hasLevelColumn = true;
+      }
       // Create a printable column from existing table column
       TableColumn printableColumn = new TableColumn();
       printableColumn.setIdentifier(tableColumn.getIdentifier());
@@ -778,7 +784,30 @@ public class FurnitureTable extends JTable implements View, Printable {
       // Change printable column header renderer
       printableColumn.setHeaderRenderer(printableHeaderRenderer);
       printableColumnModel.addColumn(printableColumn);
-    }    
+    }
+    if (!hasLevelColumn && this.home != null && this.home.getLevels().size() > 1) {
+      TableColumn levelColumn = new TableColumn(getModel().getColumnCount() - 1);
+      levelColumn.setIdentifier(HomePieceOfFurniture.SortableProperty.LEVEL);
+      levelColumn.setHeaderValue(this.preferences != null
+              ? this.preferences.getLocalizedString(FurnitureTable.class, "levelColumn")
+              : "Level");
+      levelColumn.setCellRenderer(new TableCellRenderer() {
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus,
+                                                       int row, int column) {
+          Level level = null;
+          if (value instanceof Level) {
+            level = (Level)value;
+          } else if (value instanceof HomePieceOfFurniture) {
+            level = ((HomePieceOfFurniture)value).getLevel();
+          }
+          return defaultRenderer.getTableCellRendererComponent(
+                  table, level != null ? level.getName() : "", false, false, row, column);
+        }
+      });
+      levelColumn.setHeaderRenderer(printableHeaderRenderer);
+      printableColumnModel.addColumn(levelColumn);
+    }
     return print(g, pageFormat, pageIndex, printableColumnModel, Color.BLACK);
   }
 
@@ -1095,7 +1124,7 @@ public class FurnitureTable extends JTable implements View, Printable {
         if ((columnIdentifier instanceof HomePieceOfFurniture.SortableProperty)
             && !furnitureVisibleProperties.contains(columnIdentifier)) {
           removeColumn(tableColumn);
-        } 
+        }
       }
       // Add columns not currently displayed
       for (HomePieceOfFurniture.SortableProperty visibleProperty : furnitureVisibleProperties) {
