@@ -79,6 +79,7 @@ public class HomeFurniturePanel extends JPanel implements DialogView {
   private JLabel                  depthLabel;
   private JSpinner                depthSpinner;
   private JLabel                  heightLabel;
+  private JLabel                  volumeLabel;
   private JSpinner                heightSpinner;
   private JCheckBox               keepProportionsCheckBox;
   private NullableCheckBox        mirroredModelCheckBox;
@@ -464,6 +465,33 @@ public class HomeFurniturePanel extends JPanel implements DialogView {
           }
         });
     }
+
+    this.volumeLabel = new JLabel(SwingTools.getLocalizedLabelText(preferences, HomeFurniturePanel.class,
+            "volumeLabel.text", unitName));
+    final JLabel volumeValueLabel = new JLabel();
+
+    final PropertyChangeListener volumeChangeListener = new PropertyChangeListener() {
+      public void propertyChange(PropertyChangeEvent ev) {
+        Float width = controller.getWidth();
+        Float depth = controller.getDepth();
+        Float height = controller.getHeight();
+
+        if (width != null && depth != null && height != null) {
+          float volume = width * depth * height;
+          volumeValueLabel.setText(String.valueOf(volume));
+        } else {
+          volumeValueLabel.setText("-");
+        }
+      }
+    };
+
+// Perform initial calculation
+    volumeChangeListener.propertyChange(null);
+
+// Register listeners on all 3 dimensions
+    controller.addPropertyChangeListener(HomeFurnitureController.Property.WIDTH, volumeChangeListener);
+    controller.addPropertyChangeListener(HomeFurnitureController.Property.DEPTH, volumeChangeListener);
+    controller.addPropertyChangeListener(HomeFurnitureController.Property.HEIGHT, volumeChangeListener);
     
     if (controller.isPropertyEditable(HomeFurnitureController.Property.PROPORTIONAL)) {
       // Create keep proportions check box bound to PROPORTIONAL controller property
